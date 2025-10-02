@@ -9,15 +9,22 @@ on:
 
 jobs:
   icon_automation:
-    name: figma icon automation
+    name: Figma Icon Automation
     runs-on: ubuntu-latest
     steps:
+      # Checkout repository
       - uses: actions/checkout@v3
 
+      # Setup Node.js (modern LTS version)
       - uses: actions/setup-node@v3
         with:
           node-version: "20"
 
+      # Update CA certificates to fix SSL issues
+      - name: Update CA certificates
+        run: sudo apt-get update && sudo apt-get install --reinstall ca-certificates
+
+      # Optional: Cache Yarn dependencies for faster builds
       - name: Cache Yarn dependencies
         uses: actions/cache@v3
         with:
@@ -26,9 +33,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-yarn-
 
-      - run: yarn config set registry https://registry.npmjs.org/
-      - run: yarn install
+      # Set Yarn registry to avoid potential SSL issues
+      - name: Set Yarn registry
+        run: yarn config set registry https://registry.npmjs.org/
 
+      # Install dependencies
+      - name: Install dependencies
+        run: yarn install
+
+      # Run Figma Action
       - name: Figma Action
         uses: primer/figma-action@v1.0.0-alpha.2
         with:
@@ -37,14 +50,29 @@ jobs:
           FIGMA_FILE_URL: ${{ secrets.FIGMA_FILE_URL }}
           FIGMA_TOKEN: ${{ secrets.FIGMA_TOKEN }}
 
-      - run: yarn generate
-      - run: yarn build:bundle
-      - run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_AUTH_TOKEN }}" > ~/.npmrc
-      - run: yarn publish
+      # Generate files
+      - name: Generate
+        run: yarn generate
+
+      # Build bundle
+      - name: Build Bundle
+        run: yarn build:bundle
+
+      # Setup npm auth for publishing
+      - name: Setup npm auth
+        run: echo "//registry.npmjs.org/:_authToken=${{ secrets.NPM_AUTH_TOKEN }}" > ~/.npmrc
+
+      # Publish package
+      - name: Publish
+        run: yarn publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
-      - run: yarn build
 
+      # Build the project
+      - name: Build
+        run: yarn build
+
+      # Deploy to GitHub Pages
       - name: GitHub Pages
         uses: crazy-max/ghaction-github-pages@v1.2.5
         with:
